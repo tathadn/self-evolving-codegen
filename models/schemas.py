@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
-from pydantic import BaseModel, Field
-from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
+from langgraph.graph.message import add_messages
+from pydantic import BaseModel, Field
 
 
 class TaskStatus(str, Enum):
@@ -30,6 +30,12 @@ class TestResult(BaseModel):
     failed_tests: int = 0
     errors: list[str] = Field(default_factory=list)
     output: str = ""
+    # V2 evolution metadata — all Optional so V1 pipeline behaviour is unchanged
+    generation: int | None = Field(default=None, description="Tester prompt generation used")
+    test_code: str | None = Field(default=None, description="Raw generated test file content")
+    per_test_results: list[dict] | None = Field(
+        default=None, description="Per-test pass/fail breakdown parsed from pytest output"
+    )
 
 
 class ReviewFeedback(BaseModel):
@@ -53,11 +59,11 @@ class AgentState(BaseModel):
 
     messages: Annotated[list[BaseMessage], add_messages] = Field(default_factory=list)
     user_request: str = ""
-    plan: Optional[Plan] = None
+    plan: Plan | None = None
     artifacts: list[CodeArtifact] = Field(default_factory=list)
-    review: Optional[ReviewFeedback] = None
-    test_result: Optional[TestResult] = None
+    review: ReviewFeedback | None = None
+    test_result: TestResult | None = None
     status: TaskStatus = TaskStatus.PENDING
     iteration: int = 0
     max_iterations: int = 3
-    error: Optional[str] = None
+    error: str | None = None
