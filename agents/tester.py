@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -60,26 +59,6 @@ def _format_artifacts(state: AgentState) -> str:
     return "\n".join(parts)
 
 
-def _parse_pytest_counts(stdout: str) -> tuple[int, int, int]:
-    """Extract total/passed/failed counts from pytest summary line."""
-    passed_match = re.search(r"(\d+) passed", stdout)
-    failed_match = re.search(r"(\d+) failed", stdout)
-    passed_count = int(passed_match.group(1)) if passed_match else 0
-    failed_count = int(failed_match.group(1)) if failed_match else 0
-    total = passed_count + failed_count
-    return total, passed_count, failed_count
-
-
-def _parse_per_test_results(stdout: str) -> list[dict]:
-    """Parse per-test PASSED/FAILED lines from pytest verbose output."""
-    results = []
-    for line in stdout.splitlines():
-        if " PASSED" in line:
-            results.append({"name": line.split(" PASSED")[0].strip(), "passed": True})
-        elif " FAILED" in line:
-            results.append({"name": line.split(" FAILED")[0].strip(), "passed": False})
-    return results
-
 
 def make_tester_node(generation: int = 0) -> Callable[[AgentState], dict]:
     """Return a LangGraph-compatible tester node for the given prompt generation.
@@ -125,40 +104,14 @@ def make_tester_node(generation: int = 0) -> Callable[[AgentState], dict]:
             CodeFile(filename=a.filename, content=a.content) for a in test_file_list.artifacts
         ]
         raw_test_code = "\n\n".join(a.content for a in test_file_list.artifacts)
+        requirements = state.plan.dependencies if state.plan else None
 
-        sandbox_result = run_in_sandbox(code_files + test_files)
+        base_result = run_in_sandbox(code_files + test_files, requirements=requirements or None)
 
-        per_test = _parse_per_test_results(sandbox_result.stdout)
-
-        if sandbox_result.success:
-            total, passed_count, failed_count = _parse_pytest_counts(sandbox_result.stdout)
-            result = TestResult(
-                passed=True,
-                total_tests=total or len(test_files),
-                passed_tests=passed_count or len(test_files),
-                failed_tests=0,
-                errors=[],
-                output=sandbox_result.stdout,
-                generation=generation,
-                test_code=raw_test_code,
-                per_test_results=per_test or None,
-            )
-        else:
-            total, passed_count, failed_count = _parse_pytest_counts(sandbox_result.stdout)
-            errors = [sandbox_result.stderr] if sandbox_result.stderr.strip() else []
-            if sandbox_result.stdout.strip():
-                errors.append(sandbox_result.stdout)
-            result = TestResult(
-                passed=False,
-                total_tests=total or len(test_files),
-                passed_tests=passed_count,
-                failed_tests=failed_count or (total - passed_count),
-                errors=errors,
-                output=sandbox_result.stdout,
-                generation=generation,
-                test_code=raw_test_code,
-                per_test_results=per_test or None,
-            )
+        # Attach V2 evolution metadata the runner doesn't know about
+        result = base_result.model_copy(
+            update={"generation": generation, "test_code": raw_test_code}
+        )
 
         status = TaskStatus.COMPLETED if result.passed else TaskStatus.NEEDS_REVISION
         summary = HumanMessage(

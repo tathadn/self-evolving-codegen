@@ -8,10 +8,18 @@ RUN pip install --no-cache-dir \
     httpx \
     pydantic \
     sqlalchemy \
+    numpy \
+    pandas \
+    markdown \
     pytest \
     pytest-asyncio \
+    pytest-json-report \
+    pytest-timeout \
     anyio[trio]
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 WORKDIR /workspace
 
-CMD ["pytest", "-v", "--tb=short"]
+ENTRYPOINT ["/entrypoint.sh"]
