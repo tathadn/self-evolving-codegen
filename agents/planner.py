@@ -9,7 +9,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.schemas import AgentState, Plan
 
-
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "planner.md").read_text()
 
 
@@ -34,8 +33,6 @@ def planner_node(state: AgentState) -> dict:
     return {
         "plan": plan,
         "messages": [
-            HumanMessage(
-                content=f"Plan created:\n{json.dumps(plan.model_dump(), indent=2)}"
-            )
+            HumanMessage(content=f"Plan created:\n{json.dumps(plan.model_dump(), indent=2)}")
         ],
     }

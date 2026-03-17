@@ -8,7 +8,6 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from models.schemas import AgentState, TaskStatus
 
-
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "orchestrator.md").read_text()
 
 
