@@ -9,16 +9,16 @@ from pydantic import BaseModel, Field
 
 from evolution.models import GenerationMetrics
 
-
-_ANALYZER_PROMPT = """You are an expert at analyzing AI test generation quality and identifying specific, \
-actionable failure patterns.
+_ANALYZER_PROMPT = """You are an expert at analyzing AI test generation quality and identifying \
+specific, actionable failure patterns.
 
 You will receive:
 1. The current tester system prompt
 2. Aggregate metrics from the latest generation
 3. Raw test results from a batch of pipeline runs
 
-Your job is to produce a precise diagnosis of what the tester is doing wrong and what it is doing right.
+Your job is to produce a precise diagnosis of what the tester is doing wrong and what it is \
+doing right.
 
 RULES:
 - Identify exactly 3 failure patterns. Each must be SPECIFIC and ACTIONABLE.

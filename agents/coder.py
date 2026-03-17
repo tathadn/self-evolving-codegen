@@ -9,7 +9,6 @@ from pydantic import BaseModel
 
 from models.schemas import AgentState, CodeArtifact
 
-
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "coder.md").read_text()
 
 
@@ -29,6 +28,7 @@ def _build_prompt(state: AgentState) -> str:
 
     if state.plan:
         import json
+
         parts.append(f"\nImplementation plan:\n{json.dumps(state.plan.model_dump(), indent=2)}")
 
     if state.review and not state.review.approved:
@@ -46,7 +46,9 @@ def _build_prompt(state: AgentState) -> str:
     if state.artifacts:
         parts.append("\nExisting code to revise:")
         for artifact in state.artifacts:
-            parts.append(f"\n### {artifact.filename}\n```{artifact.language}\n{artifact.content}\n```")
+            parts.append(
+                f"\n### {artifact.filename}\n```{artifact.language}\n{artifact.content}\n```"
+            )
 
     return "\n".join(parts)
 

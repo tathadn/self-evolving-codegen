@@ -24,7 +24,7 @@ class SandboxResult:
 
 
 def run_in_sandbox(files: list[CodeFile]) -> SandboxResult:
-    """Write files to a temp directory, run pytest inside the sandbox container, and return the result."""
+    """Write files to a temp directory, run pytest inside the sandbox container."""
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
 
@@ -36,9 +36,13 @@ def run_in_sandbox(files: list[CodeFile]) -> SandboxResult:
         try:
             proc = subprocess.run(
                 [
-                    "docker", "run", "--rm",
-                    "--network", "none",
-                    "-v", f"{tmpdir}:/workspace",
+                    "docker",
+                    "run",
+                    "--rm",
+                    "--network",
+                    "none",
+                    "-v",
+                    f"{tmpdir}:/workspace",
                     SANDBOX_IMAGE,
                 ],
                 capture_output=True,
