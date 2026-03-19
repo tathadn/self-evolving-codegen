@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config import MAX_TOKENS, PLANNER_MODEL
 from models.schemas import AgentState, Plan
 
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "planner.md").read_text()
@@ -14,8 +14,8 @@ _PROMPT = (Path(__file__).parent.parent / "prompts" / "planner.md").read_text()
 
 def get_llm() -> ChatAnthropic:
     return ChatAnthropic(
-        model=os.getenv("PLANNER_MODEL", "claude-sonnet-4-6"),
-        max_tokens=2048,
+        model=PLANNER_MODEL,
+        max_tokens=MAX_TOKENS["planner"],
     )
 
 

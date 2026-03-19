@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config import EVOLVER_MODEL, MAX_TOKENS
 from evolution.analyzer import AnalysisResult
 from evolution.models import GenerationMetrics
 
@@ -33,8 +33,8 @@ RULES:
 def get_llm() -> ChatAnthropic:
     """Return the Sonnet model used for prompt evolution."""
     return ChatAnthropic(
-        model=os.getenv("EVOLVER_MODEL", "claude-sonnet-4-6"),
-        max_tokens=2048,
+        model=EVOLVER_MODEL,
+        max_tokens=MAX_TOKENS["evolver"],
     )
 
 

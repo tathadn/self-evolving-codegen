@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config import MAX_TOKENS, REVIEWER_MODEL
 from models.schemas import AgentState, ReviewFeedback, TaskStatus
 
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "reviewer.md").read_text()
@@ -13,8 +13,8 @@ _PROMPT = (Path(__file__).parent.parent / "prompts" / "reviewer.md").read_text()
 
 def get_llm() -> ChatAnthropic:
     return ChatAnthropic(
-        model=os.getenv("REVIEWER_MODEL", "claude-sonnet-4-6"),
-        max_tokens=2048,
+        model=REVIEWER_MODEL,
+        max_tokens=MAX_TOKENS["reviewer"],
     )
 
 

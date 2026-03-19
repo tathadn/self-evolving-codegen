@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from config import ORCHESTRATOR_MODEL, ROLLBACK_THRESHOLD, SAMPLE_TASKS  # noqa: E402
 from langgraph.graph import END, START, StateGraph  # noqa: E402
 
 from agents import (  # noqa: E402
@@ -30,27 +31,13 @@ from agents import (  # noqa: E402
 )
 from agents.tester import make_tester_node  # noqa: E402
 from evolution import analyzer, evaluator, evolver  # noqa: E402
+from evolution.cache import load_cached, rate_limited_call, save_to_cache  # noqa: E402
 from evolution.models import GenerationMetrics  # noqa: E402
-from evolution.tracker import EvolutionTracker  # noqa: E402
+from evolution.tracker import EvolutionTracker, estimate_total_cost  # noqa: E402
 from evolution.visualize import plot_evolution  # noqa: E402
 from models.schemas import AgentState, CodeArtifact  # noqa: E402
 
 _PROMPTS_DIR = Path(__file__).parent / "prompts"
-
-SAMPLE_TASKS: list[str] = [
-    "A Python calculator that supports add, subtract, multiply, divide with error handling"
-    " for division by zero",
-    "A Python FastAPI server with /health and /echo POST endpoints",
-    "A Python linked list implementation with insert, delete, search, and reverse methods",
-    "A Python file-based todo list manager with add, remove, list, and mark-complete operations",
-    "A Python password validator that checks length, uppercase, lowercase, digits, and special"
-    " characters",
-    "A Python CSV parser that reads a file and computes column statistics (mean, median, min, max)",
-    "A Python rate limiter class using the token bucket algorithm",
-    "A Python LRU cache implementation with get and put operations",
-    "A Python Markdown-to-HTML converter supporting headers, bold, italic, and links",
-    "A Python binary search tree with insert, delete, search, and in-order traversal",
-]
 
 
 # ── Pipeline helpers ─────────────────────────────────────────────────────────
@@ -86,7 +73,12 @@ def _build_graph_for_generation(generation: int):
 
 
 def _run_task(task: str, generation: int, max_iterations: int = 2) -> AgentState:
-    """Run one coding task through the pipeline and return the final AgentState.
+    """Run one coding task through the pipeline, using the disk cache when available.
+
+    On a cache hit the pipeline is skipped entirely and the cached AgentState is
+    deserialised and returned. On a cache miss the pipeline runs via
+    ``rate_limited_call`` to respect Pro plan rate limits, and the result is
+    written to the cache before returning.
 
     Args:
         task: The user coding request to pass to the pipeline.
@@ -96,9 +88,20 @@ def _run_task(task: str, generation: int, max_iterations: int = 2) -> AgentState
     Returns:
         The final AgentState after the pipeline completes or exhausts revisions.
     """
-    app = _build_graph_for_generation(generation)
-    initial = AgentState(user_request=task, max_iterations=max_iterations)
-    result = app.invoke(initial, config={"recursion_limit": 50})
+    cached = load_cached(task, generation)
+    if cached is not None:
+        print(f"    [CACHE HIT] {task[:60]}...")
+        return AgentState(**cached)
+
+    print(f"    [API CALL]  {task[:60]}...")
+
+    def _invoke() -> dict:
+        app = _build_graph_for_generation(generation)
+        initial = AgentState(user_request=task, max_iterations=max_iterations)
+        return app.invoke(initial, config={"recursion_limit": 50})
+
+    result = rate_limited_call(_invoke)
+    save_to_cache(task, generation, result)
     return AgentState(**result)
 
 
@@ -199,7 +202,7 @@ def run_evolution(
     batch_size: int = 5,
     experiment_name: str = "default",
     max_pipeline_iterations: int = 2,
-    rollback_threshold: float = 0.15,
+    rollback_threshold: float = ROLLBACK_THRESHOLD,
 ) -> None:
     """Run the full self-evolution experiment.
 
@@ -226,11 +229,20 @@ def run_evolution(
     print(f"\n{'=' * 60}")
     print(f"  Self-Evolving Tester — Experiment: {experiment_name}")
     print(f"  Generations: {generations}  |  Batch size: {batch_size}")
+    print(f"  Orchestrator model: {ORCHESTRATOR_MODEL}")
     print(f"{'=' * 60}\n")
 
     if not os.getenv("ANTHROPIC_API_KEY"):
         print("ERROR: ANTHROPIC_API_KEY is not set. Add it to your .env file.")
         sys.exit(1)
+
+    use_opus = "opus" in ORCHESTRATOR_MODEL.lower()
+    est = estimate_total_cost(generations, batch_size, use_opus=use_opus)
+    print(f"Estimated cost: ${est:.2f} (cached runs cost $0.00)")
+    print("Continue? [y/N] ", end="", flush=True)
+    if input().strip().lower() != "y":
+        print("Aborted.")
+        sys.exit(0)
 
     tracker = EvolutionTracker(experiment_name)
 

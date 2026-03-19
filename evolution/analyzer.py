@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import json
-import os
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field
 
+from config import ANALYZER_MODEL, MAX_TOKENS
 from evolution.models import GenerationMetrics
 
 _ANALYZER_PROMPT = """You are an expert at analyzing AI test generation quality and identifying \
@@ -54,8 +54,8 @@ class AnalysisResult(BaseModel):
 def get_llm() -> ChatAnthropic:
     """Return the Sonnet model used for analysis."""
     return ChatAnthropic(
-        model=os.getenv("ANALYZER_MODEL", "claude-sonnet-4-6"),
-        max_tokens=2048,
+        model=ANALYZER_MODEL,
+        max_tokens=MAX_TOKENS["analyzer"],
     )
 
 

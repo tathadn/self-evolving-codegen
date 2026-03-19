@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from collections.abc import Callable
 from pathlib import Path
 
@@ -9,6 +8,7 @@ from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, field_validator
 
+from config import MAX_TOKENS, TESTER_MODEL
 from models.schemas import AgentState, CodeArtifact, TaskStatus, TestResult
 from sandbox.runner import CodeFile, run_in_sandbox
 
@@ -46,8 +46,8 @@ class TestFileList(BaseModel):
 def get_llm() -> ChatAnthropic:
     """Return the LLM used by the tester."""
     return ChatAnthropic(
-        model=os.getenv("TESTER_MODEL", "claude-sonnet-4-6"),
-        max_tokens=4096,
+        model=TESTER_MODEL,
+        max_tokens=MAX_TOKENS["tester"],
     )
 
 

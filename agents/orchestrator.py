@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config import MAX_TOKENS, ORCHESTRATOR_MODEL
 from models.schemas import AgentState, TaskStatus
 
 _PROMPT = (Path(__file__).parent.parent / "prompts" / "orchestrator.md").read_text()
@@ -13,8 +13,8 @@ _PROMPT = (Path(__file__).parent.parent / "prompts" / "orchestrator.md").read_te
 
 def get_llm() -> ChatAnthropic:
     return ChatAnthropic(
-        model=os.getenv("ORCHESTRATOR_MODEL", "claude-opus-4-6"),
-        max_tokens=1024,
+        model=ORCHESTRATOR_MODEL,
+        max_tokens=MAX_TOKENS["orchestrator"],
     )
 
 

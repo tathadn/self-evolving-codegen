@@ -8,6 +8,47 @@ from evolution.models import EvolutionHistory, GenerationMetrics
 
 _EXPERIMENTS_DIR = Path(__file__).parent.parent / "experiments"
 
+# ── Cost estimation ────────────────────────────────────────────────────────────
+
+_COST_PER_CALL: dict[str, float] = {
+    "opus": 0.30,
+    "sonnet": 0.06,
+    "haiku": 0.005,
+}
+
+
+def estimate_generation_cost(batch_size: int, use_opus: bool = False) -> float:
+    """Estimate API cost for one generation.
+
+    Args:
+        batch_size: Number of tasks run in the generation.
+        use_opus: Whether the orchestrator is using Opus (Phase 6 only).
+
+    Returns:
+        Estimated cost in USD, rounded to 3 decimal places.
+    """
+    orch = _COST_PER_CALL["opus"] if use_opus else _COST_PER_CALL["sonnet"]
+    # planner + coder + reviewer + tester = 4 Sonnet calls per task
+    pipeline = batch_size * (orch + _COST_PER_CALL["sonnet"] * 4)
+    eval_cost = batch_size * _COST_PER_CALL["haiku"]
+    analysis_cost = _COST_PER_CALL["sonnet"]  # analyzer
+    evolution_cost = _COST_PER_CALL["sonnet"]  # evolver
+    return round(pipeline + eval_cost + analysis_cost + evolution_cost, 3)
+
+
+def estimate_total_cost(generations: int, batch_size: int, use_opus: bool = False) -> float:
+    """Estimate total experiment cost across all generations.
+
+    Args:
+        generations: Total number of evolution generations.
+        batch_size: Number of tasks per generation.
+        use_opus: Whether the orchestrator is using Opus (Phase 6 only).
+
+    Returns:
+        Estimated total cost in USD, rounded to 2 decimal places.
+    """
+    return round(generations * estimate_generation_cost(batch_size, use_opus), 2)
+
 
 class EvolutionTracker:
     """JSON-based persistence for a single evolution experiment.

@@ -1,23 +1,14 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from config import EVALUATOR_MODEL, MAX_TOKENS, WEIGHTS
 from evolution.models import GenerationMetrics, TestEffectivenessScore
 from models.schemas import CodeArtifact, TestResult
-
-# Scoring weights as defined in CLAUDE.md
-WEIGHTS: dict[str, float] = {
-    "bug_detection_rate": 0.30,
-    "false_failure_rate": 0.25,  # inverted: lower is better
-    "coverage_quality": 0.20,
-    "edge_case_coverage": 0.15,
-    "redundancy_rate": 0.10,  # inverted: lower is better
-}
 
 _JUDGE_PROMPT = """You are an expert software testing evaluator acting as an impartial judge.
 
@@ -62,8 +53,8 @@ Respond ONLY with JSON, no preamble, no markdown fences:
 def get_llm() -> ChatAnthropic:
     """Return the Haiku model used as the cost-efficient LLM judge."""
     return ChatAnthropic(
-        model=os.getenv("EVALUATOR_MODEL", "claude-haiku-4-5-20251001"),
-        max_tokens=4096,
+        model=EVALUATOR_MODEL,
+        max_tokens=MAX_TOKENS["evaluator"],
     )
 
 

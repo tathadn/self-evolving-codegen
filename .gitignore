@@ -49,6 +49,9 @@ htmlcov/
 # LangGraph / LangSmith
 .langgraph_cache/
 
+# Pipeline result cache (cost control — never commit)
+.cache/
+
 # Streamlit
 .streamlit/secrets.toml
 
