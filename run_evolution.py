@@ -19,7 +19,13 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from config import ORCHESTRATOR_MODEL, ROLLBACK_THRESHOLD, SAMPLE_TASKS  # noqa: E402
+from config import (  # noqa: E402
+    LANGCHAIN_PROJECT,
+    LANGCHAIN_TRACING_V2,
+    ORCHESTRATOR_MODEL,
+    ROLLBACK_THRESHOLD,
+    SAMPLE_TASKS,
+)
 from langgraph.graph import END, START, StateGraph  # noqa: E402
 
 from agents import (  # noqa: E402
@@ -72,7 +78,12 @@ def _build_graph_for_generation(generation: int):
     return graph.compile()
 
 
-def _run_task(task: str, generation: int, max_iterations: int = 2) -> AgentState:
+def _run_task(
+    task: str,
+    generation: int,
+    max_iterations: int = 2,
+    experiment_name: str = "default",
+) -> AgentState:
     """Run one coding task through the pipeline, using the disk cache when available.
 
     On a cache hit the pipeline is skipped entirely and the cached AgentState is
@@ -84,6 +95,7 @@ def _run_task(task: str, generation: int, max_iterations: int = 2) -> AgentState
         task: The user coding request to pass to the pipeline.
         generation: Tester prompt generation to use.
         max_iterations: Max coder/reviewer/tester revision cycles.
+        experiment_name: Experiment identifier, used as a LangSmith trace tag.
 
     Returns:
         The final AgentState after the pipeline completes or exhausts revisions.
@@ -98,7 +110,17 @@ def _run_task(task: str, generation: int, max_iterations: int = 2) -> AgentState
     def _invoke() -> dict:
         app = _build_graph_for_generation(generation)
         initial = AgentState(user_request=task, max_iterations=max_iterations)
-        return app.invoke(initial, config={"recursion_limit": 50})
+        run_config = {
+            "recursion_limit": 50,
+            "run_name": f"{experiment_name}/gen{generation}",
+            "metadata": {
+                "experiment": experiment_name,
+                "generation": generation,
+                "task": task[:120],
+            },
+            "tags": [experiment_name, f"gen-{generation}"],
+        }
+        return app.invoke(initial, config=run_config)
 
     result = rate_limited_call(_invoke)
     save_to_cache(task, generation, result)
@@ -230,6 +252,8 @@ def run_evolution(
     print(f"  Self-Evolving Tester — Experiment: {experiment_name}")
     print(f"  Generations: {generations}  |  Batch size: {batch_size}")
     print(f"  Orchestrator model: {ORCHESTRATOR_MODEL}")
+    tracing_status = f"enabled (project: {LANGCHAIN_PROJECT})" if LANGCHAIN_TRACING_V2 else "disabled"
+    print(f"  LangSmith tracing: {tracing_status}")
     print(f"{'=' * 60}\n")
 
     if not os.getenv("ANTHROPIC_API_KEY"):
@@ -260,7 +284,12 @@ def run_evolution(
         for i, task in enumerate(tasks, 1):
             print(f"  [{i}/{len(tasks)}] {task[:72]}...")
             try:
-                state = _run_task(task, generation=gen, max_iterations=max_pipeline_iterations)
+                state = _run_task(
+                    task,
+                    generation=gen,
+                    max_iterations=max_pipeline_iterations,
+                    experiment_name=experiment_name,
+                )
 
                 # Build synthetic test artifact for the evaluator if test_code is available
                 test_artifacts: list[CodeArtifact] = []
