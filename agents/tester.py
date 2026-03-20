@@ -19,17 +19,18 @@ def _load_prompt(generation: int) -> str:
     """Load the tester system prompt for the given generation.
 
     Generation 0 uses the original ``prompts/tester.md``.
-    Generation N > 0 uses ``prompts/tester_gen_{N}.txt``.
+    Generation N > 0 uses ``prompts/tester_gen_{N}.txt``, falling back to
+    the nearest earlier generation that exists, then to the base prompt.
     """
     if generation == 0:
         return (_PROMPTS_DIR / "tester.md").read_text()
-    path = _PROMPTS_DIR / f"tester_gen_{generation}.txt"
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Evolved prompt for generation {generation} not found at {path}. "
-            "Run the evolution loop first or use generation=0."
-        )
-    return path.read_text()
+    # Walk backwards to find the most recent available evolved prompt
+    for gen in range(generation, 0, -1):
+        path = _PROMPTS_DIR / f"tester_gen_{gen}.txt"
+        if path.exists():
+            return path.read_text()
+    # Ultimate fallback: original base prompt
+    return (_PROMPTS_DIR / "tester.md").read_text()
 
 
 class TestFileList(BaseModel):

@@ -123,8 +123,12 @@ def _run_task(
         return app.invoke(initial, config=run_config)
 
     result = rate_limited_call(_invoke)
-    save_to_cache(task, generation, result)
-    return AgentState(**result)
+    state = AgentState(**result)
+    # Exclude messages: BaseMessage objects aren't JSON-round-trippable,
+    # and evaluation only needs artifacts + test_result.
+    cache_data = {k: v for k, v in state.model_dump(mode="json").items() if k != "messages"}
+    save_to_cache(task, generation, cache_data)
+    return state
 
 
 def _load_current_prompt(generation: int) -> str:
