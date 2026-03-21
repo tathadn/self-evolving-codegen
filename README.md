@@ -318,3 +318,8 @@ self-evolving-codegen/
 ├── app.py                     # Streamlit UI with Evolution Dashboard tab
 └── run_evolution.py           # Main evolution loop
 ```
+
+## Tools Used
+
+- **[Claude](https://claude.ai)** (Anthropic) — Used as the AI assistant throughout development: writing and refactoring code, debugging, and architecture decisions.
+
