@@ -49,28 +49,35 @@ All three projects share the same five-agent shape, but the Tester is the only a
 
 ## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  CODE GENERATION PIPELINE (LangGraph StateGraph)             │
-│                                                              │
-│  Orchestrator → Planner → Coder → Reviewer → Tester ──┐     │
-│                            ▲                           │     │
-│                            └── revision loop ──────────┘     │
-└──────────────────────────────────┬───────────────────────────┘
-                                   │ test results + metadata
-                                   ▼
-┌──────────────────────────────────────────────────────────────┐
-│  SELF-EVOLUTION ENGINE (evolution/)                           │
-│                                                              │
-│  Evaluator → Analyzer → Evolver → Tracker                    │
-│      │                      │                                │
-│      │ scores tests         │ writes new prompt              │
-│      │ via LLM-as-Judge     │ (prompts/tester_gen_N.txt)     │
-│      │                      │                                │
-│      └──────────────────────┘                                │
-│              ▲                                               │
-│              │ next generation uses updated prompt            │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph pipeline["**CODE GENERATION PIPELINE** &nbsp;·&nbsp; LangGraph StateGraph"]
+        direction LR
+        O([Orchestrator]) --> P([Planner])
+        P --> C([Coder])
+        C --> R([Reviewer])
+        R --> T([Tester])
+        T -. revision loop<br/>review/test failed .-> C
+    end
+
+    subgraph evolution["**SELF-EVOLUTION ENGINE** &nbsp;·&nbsp; evolution/"]
+        direction LR
+        EV([Evaluator<br/><i>Haiku — LLM-as-Judge</i>])
+        AN([Analyzer<br/><i>Sonnet</i>])
+        EVR([Evolver<br/><i>Sonnet</i>])
+        TR([Tracker<br/><i>persist + rollback</i>])
+        EV --> AN
+        AN --> EVR
+        EVR --> TR
+    end
+
+    pipeline -- "test results +<br/>raw metadata" --> evolution
+    evolution -- "prompts/tester_gen_N+1.txt<br/>next generation uses updated prompt" --> pipeline
+
+    classDef pipe fill:#eef4ff,stroke:#4c6fa4,stroke-width:1px,color:#1b2a4e;
+    classDef evo fill:#fff4e6,stroke:#b8722b,stroke-width:1px,color:#4a2c07;
+    class O,P,C,R,T pipe;
+    class EV,AN,EVR,TR evo;
 ```
 
 ### Code Generation Pipeline
