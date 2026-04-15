@@ -2,11 +2,13 @@
 
 [![CI](https://github.com/tathadn/self-evolving-codegen/actions/workflows/ci.yml/badge.svg)](https://github.com/tathadn/self-evolving-codegen/actions/workflows/ci.yml)
 
-> V2 of [multi-agent-codegen](https://github.com/tathadn/multi-agent-codegen) — the same pipeline, now with a self-evolving tester.
+> **Third entry in the Multi-Agent Codegen Trilogy** — a three-repo study exploring how far a five-agent LLM pipeline can be pushed along different axes.
+>
+> [`multi-agent-codegen`](https://github.com/tathadn/multi-agent-codegen) (foundation) → [`parallel-multi-agent-codegen`](https://github.com/tathadn/parallel-multi-agent-codegen) (parallelism + cost) → **`self-evolving-codegen`** (autonomy + meta-learning).
 
-A multi-agent AI code generation pipeline (LangGraph + Claude) where the **Tester agent autonomously improves its own test generation strategy** over successive generations through self-evaluation, failure analysis, and prompt evolution.
+A multi-agent AI code generation pipeline (LangGraph + Claude) where the **Tester agent autonomously improves its own test generation strategy** over successive generations through self-evaluation, failure analysis, and prompt evolution. No human in the loop edits the prompt — the system rewrites it.
 
-The five-agent pipeline (Orchestrator → Planner → Coder → Reviewer → Tester) is inherited from V1. V2 adds a **self-evolution engine** that wraps the Tester, observing its performance across batches of pipeline runs and iteratively rewriting its system prompt to produce better tests.
+The five-agent pipeline (Orchestrator → Planner → Coder → Reviewer → Tester) is inherited from [V1](https://github.com/tathadn/multi-agent-codegen). This repo adds a **self-evolution engine** that wraps the Tester, scores its output with a Haiku-based LLM-as-Judge, diagnoses failure patterns, and rewrites the Tester's own system prompt for the next generation.
 
 ---
 
@@ -15,6 +17,33 @@ The five-agent pipeline (Orchestrator → Planner → Coder → Reviewer → Tes
 ![Multi-Agent Code Generator — pipeline complete with 79/79 tests passing](assets/demo.png)
 
 *The sidebar shows real-time agent status indicators. A student grade tracker was generated, reviewed (9/10), and passed 79/79 tests on the first attempt.*
+
+---
+
+## The Multi-Agent Codegen Trilogy
+
+This repo is the third of three projects that take the same five-agent pipeline (Orchestrator → Planner → Coder → Reviewer → Tester) and push it along three very different axes. Each repo stands alone, but they're designed to be read as a progression: **prove the architecture → optimise execution → close the learning loop.**
+
+| # | Project | Axis explored | What's new vs. V1 | Status |
+|---|---|---|---|---|
+| 1 | [`multi-agent-codegen`](https://github.com/tathadn/multi-agent-codegen) | **Foundation** — does a five-agent LangGraph pipeline actually produce working code? | Sequential `Orchestrator → Planner → Coder → Reviewer → Tester` with a conditional revision loop. Docker sandbox, LangSmith tracing, a USD budget callback, and a Streamlit UI. | Baseline |
+| 2 | [`parallel-multi-agent-codegen`](https://github.com/tathadn/parallel-multi-agent-codegen) | **Parallelism + cost** — can we make the pipeline faster and dramatically cheaper without losing quality? | Orchestrator decomposes the plan into a **Task DAG**; concurrent coder workers dispatched via `asyncio` + `ThreadPoolExecutor`. Drops LangChain for the native Anthropic SDK to get ephemeral **prompt caching** (60–90% input-cost reduction). Adds model tiering (Sonnet for reasoning, Haiku for mechanical steps) and **surgical revisions** that reset only failing DAG nodes. | ~$0.06–0.08 per full run |
+| 3 | **`self-evolving-codegen`** *(you are here)* | **Autonomy + meta-learning** — can the pipeline improve its own agents without a human editing prompts? | Wraps the Tester in a four-stage **self-evolution engine** (Evaluator → Analyzer → Evolver → Tracker). A Haiku LLM-as-Judge scores every run, a Sonnet analyzer diagnoses failure patterns, a Sonnet evolver rewrites the Tester's system prompt, and a tracker persists the whole history with rollback-on-regression. | Gen 0 → Gen 1: **0.506 → 0.921** overall score (see [Results](#results)) |
+
+### What each repo teaches the next
+
+- **V1 → parallel** answers *"okay, it works — now can we afford to run it at scale?"* The answer is yes, but only if you stop paying full price for every system-prompt token and stop re-running nodes that already passed.
+- **parallel → self-evolving** answers *"the plumbing is cheap enough — can the agents get better on their own?"* Where the parallel repo caches the prompt, this repo **rewrites** it. The bottleneck stops being runtime and starts being test-generation quality, so the Tester becomes the focus of a dedicated improvement loop.
+
+### Why the Tester, specifically?
+
+All three projects share the same five-agent shape, but the Tester is the only agent whose output is **externally verifiable without a human** — either `pytest` passes in the Docker sandbox or it doesn't. That makes it the one agent where an LLM-as-Judge has enough ground truth to generate a learning signal. Coder and Reviewer depend on subjective quality judgements; Tester has a binary oracle. So the self-evolution loop lives on the only agent where it can be trusted to actually converge, and V2's single biggest insight — visible in the [Results](#results) section — is that the bottleneck wasn't *what* the Tester was testing, it was *how it was formatting its output*. The evolver found and fixed that in one cycle.
+
+### How this repo relates to the others in your reading order
+
+- **Start here** if you care about autonomous self-improvement, prompt meta-learning, or LLM-as-Judge evaluation harnesses. The `evolution/` package is the focal point.
+- **Start at the parallel repo** if you care about production cost optimisation, DAG scheduling, or prompt caching.
+- **Start at V1** if you want the cleanest reading of the base LangGraph + Pydantic + Docker sandbox architecture before either extension is layered on.
 
 ---
 
@@ -364,4 +393,28 @@ self-evolving-codegen/
 ## Tools Used
 
 - **[Claude](https://claude.ai)** (Anthropic) — Used as the AI assistant throughout development: writing and refactoring code, debugging, and architecture decisions.
+
+---
+
+## Related Work — The Trilogy in Full
+
+This repo is one of three. If the self-evolution story here is interesting, the companion projects explore complementary dimensions of the same five-agent pipeline:
+
+### [`multi-agent-codegen`](https://github.com/tathadn/multi-agent-codegen) — Foundation
+
+The origin point. A sequential `Orchestrator → Planner → Coder → Reviewer → Tester` pipeline built on LangGraph with a revision loop, Docker sandbox, LangSmith tracing, and a Streamlit UI. Proves the five-agent architecture works end-to-end and provides the shared `AgentState` schema that both V2 variants inherit. Read it first if you want the cleanest view of the base architecture.
+
+### [`parallel-multi-agent-codegen`](https://github.com/tathadn/parallel-multi-agent-codegen) — Parallelism & Cost
+
+A different V2. Instead of adding a learning loop, it attacks the cost axis: the Orchestrator decomposes the plan into a **Task DAG**, concurrent coder workers run via `asyncio` + `ThreadPoolExecutor`, and the codebase drops the LangChain wrapper in favour of the native Anthropic SDK to get **ephemeral prompt caching** (60–90% input cost reduction on cached system prompts). Mechanical agents (Integrator, Reviewer, Tester) are tiered down to Haiku, reasoning agents (Planner, Coder, DAG builder) stay on Sonnet. Surgical revisions reset only failing DAG nodes instead of re-running the whole pipeline. Typical full-run cost lands at **$0.06–0.08**, with a 102-test fully-mocked test suite and multi-Python CI. Read it if you care about production-grade cost engineering on LLM pipelines.
+
+### How to choose which to read first
+
+| If you want… | Start with |
+|---|---|
+| The minimal architecture, clearly | `multi-agent-codegen` |
+| Cost optimization, prompt caching, DAG scheduling, model tiering | `parallel-multi-agent-codegen` |
+| LLM-as-Judge evaluation, prompt meta-learning, self-improvement loops | **this repo** |
+
+All three share the core pipeline and `AgentState` model, so code patterns are directly comparable across repos — the diffs that remain are exactly the contribution each project is making.
 
