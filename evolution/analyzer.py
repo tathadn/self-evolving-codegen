@@ -1,6 +1,16 @@
+"""Failure-pattern analyzer for the self-evolution loop.
+
+Consumes a generation's aggregate :class:`GenerationMetrics` plus a sample of
+raw per-task test results and produces an :class:`AnalysisResult` — three
+specific failure patterns, strengths to preserve, and ranked fix instructions.
+The output feeds directly into :mod:`evolution.evolver`, which rewrites the
+tester system prompt for the next generation.
+"""
+
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -53,7 +63,7 @@ class AnalysisResult(BaseModel):
 
 def get_llm() -> ChatAnthropic:
     """Return the Sonnet model used for analysis."""
-    return ChatAnthropic(
+    return ChatAnthropic(  # type: ignore[call-arg]
         model=ANALYZER_MODEL,
         max_tokens=MAX_TOKENS["analyzer"],
     )
@@ -62,7 +72,7 @@ def get_llm() -> ChatAnthropic:
 def _build_user_message(
     current_prompt: str,
     metrics: GenerationMetrics,
-    raw_test_results: list[dict],
+    raw_test_results: list[dict[str, Any]],
 ) -> str:
     """Format the analyzer's human-turn input."""
     metrics_summary = {
@@ -91,7 +101,7 @@ def _build_user_message(
 def analyze(
     current_prompt: str,
     metrics: GenerationMetrics,
-    raw_test_results: list[dict],
+    raw_test_results: list[dict[str, Any]],
 ) -> AnalysisResult:
     """Identify failure patterns and strengths from the latest generation's results.
 

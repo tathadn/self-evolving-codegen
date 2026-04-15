@@ -52,7 +52,7 @@ Respond ONLY with JSON, no preamble, no markdown fences:
 
 def get_llm() -> ChatAnthropic:
     """Return the Haiku model used as the cost-efficient LLM judge."""
-    return ChatAnthropic(
+    return ChatAnthropic(  # type: ignore[call-arg]
         model=EVALUATOR_MODEL,
         max_tokens=MAX_TOKENS["evaluator"],
     )

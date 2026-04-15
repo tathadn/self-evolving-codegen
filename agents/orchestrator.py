@@ -1,29 +1,36 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import Any, ClassVar
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config import MAX_TOKENS, ORCHESTRATOR_MODEL
+from agents.base import BaseAgent
+from config import ORCHESTRATOR_MODEL
 from models.schemas import AgentState, TaskStatus
 
-_PROMPT = (Path(__file__).parent.parent / "prompts" / "orchestrator.md").read_text()
+
+class OrchestratorAgent(BaseAgent):
+    model_name: ClassVar[str] = ORCHESTRATOR_MODEL
+    max_tokens_key: ClassVar[str] = "orchestrator"
+    prompt_name: ClassVar[str] = "orchestrator"
 
 
-def get_llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model=ORCHESTRATOR_MODEL,
-        max_tokens=MAX_TOKENS["orchestrator"],
-    )
+_agent: OrchestratorAgent | None = None
 
 
-def orchestrator_node(state: AgentState) -> dict:
+def _get_agent() -> OrchestratorAgent:
+    global _agent
+    if _agent is None:
+        _agent = OrchestratorAgent()
+    return _agent
+
+
+def orchestrator_node(state: AgentState) -> dict[str, Any]:
     """Entry point: interprets the user request and sets the initial status."""
-    llm = get_llm()
+    agent = _get_agent()
 
     messages = [
-        SystemMessage(content=_PROMPT),
+        SystemMessage(content=agent.system_prompt),
         HumanMessage(
             content=(
                 f"User request: {state.user_request}\n\n"
@@ -33,7 +40,7 @@ def orchestrator_node(state: AgentState) -> dict:
         ),
     ]
 
-    response = llm.invoke(messages)
+    response = agent.llm.invoke(messages)
 
     return {
         "messages": [response],

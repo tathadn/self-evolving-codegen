@@ -1,0 +1,15 @@
+{
+  "generation": 0,
+  "bug_detection_rate": 0.0,
+  "false_failure_rate": 0.0,
+  "redundancy_rate": 0.0,
+  "coverage_quality": 5.0,
+  "edge_case_coverage": 5.0,
+  "overall_score": 0.5056,
+  "strengths": [],
+  "weaknesses": [
+    "Evaluator failed to parse LLM response: Unterminated string starting at: line 165 column 7 (char 4392)",
+    "Evaluator failed to parse LLM response: Unterminated string starting at: line 158 column 7 (char 4406)"
+  ],
+  "timestamp": "2026-03-20T17:32:19.504832"
+}

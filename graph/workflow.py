@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
@@ -15,16 +16,16 @@ from agents import (
 from models.schemas import AgentState
 
 
-def build_graph() -> StateGraph:
+def build_graph() -> Any:
     """Constructs and compiles the multi-agent workflow graph."""
-    graph = StateGraph(AgentState)
+    graph: StateGraph = StateGraph(AgentState)  # type: ignore[type-arg]
 
     # Register nodes
     graph.add_node("orchestrator", orchestrator_node)
     graph.add_node("planner", planner_node)
     graph.add_node("coder", coder_node)
     graph.add_node("reviewer", reviewer_node)
-    graph.add_node("tester", tester_node)
+    graph.add_node("tester", tester_node)  # type: ignore[arg-type]
 
     # Linear flow: orchestrator → planner → coder → reviewer → tester
     graph.add_edge(START, "orchestrator")

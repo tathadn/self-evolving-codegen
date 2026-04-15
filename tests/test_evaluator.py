@@ -7,7 +7,7 @@ from evolution.mock_data import MOCK_TEST_SCORES
 
 
 class TestComputeOverallScore:
-    def test_perfect_score(self):
+    def test_perfect_score(self) -> None:
         score = _compute_overall_score(
             bug_detection_rate=1.0,
             false_failure_rate=0.0,
@@ -17,7 +17,7 @@ class TestComputeOverallScore:
         )
         assert score == 1.0
 
-    def test_zero_score(self):
+    def test_zero_score(self) -> None:
         score = _compute_overall_score(
             bug_detection_rate=0.0,
             false_failure_rate=1.0,
@@ -27,7 +27,7 @@ class TestComputeOverallScore:
         )
         assert score == 0.0
 
-    def test_midpoint_score(self):
+    def test_midpoint_score(self) -> None:
         score = _compute_overall_score(
             bug_detection_rate=0.5,
             false_failure_rate=0.5,
@@ -37,20 +37,20 @@ class TestComputeOverallScore:
         )
         assert 0.0 <= score <= 1.0
 
-    def test_inverted_metrics(self):
+    def test_inverted_metrics(self) -> None:
         # Higher false_failure_rate should lower the score
         score_low_ffr = _compute_overall_score(0.8, 0.0, 0.0, 8.0, 8.0)
         score_high_ffr = _compute_overall_score(0.8, 1.0, 0.0, 8.0, 8.0)
         assert score_low_ffr > score_high_ffr
 
-    def test_output_clamped(self):
+    def test_output_clamped(self) -> None:
         # Should never exceed [0, 1]
         score = _compute_overall_score(1.0, 0.0, 0.0, 10.0, 10.0)
         assert 0.0 <= score <= 1.0
 
 
 class TestAggregate:
-    def test_aggregate_with_mock_scores(self):
+    def test_aggregate_with_mock_scores(self) -> None:
         metrics = _aggregate(
             scores=MOCK_TEST_SCORES,
             coverage_quality=6.5,
@@ -66,7 +66,7 @@ class TestAggregate:
         assert metrics.coverage_quality == 6.5
         assert metrics.strengths == ["Tests basic path"]
 
-    def test_aggregate_empty_scores(self):
+    def test_aggregate_empty_scores(self) -> None:
         metrics = _aggregate(
             scores=[],
             coverage_quality=5.0,
@@ -79,7 +79,7 @@ class TestAggregate:
         assert metrics.false_failure_rate == 0.0
         assert metrics.redundancy_rate == 0.0
 
-    def test_aggregate_rates_match_counts(self):
+    def test_aggregate_rates_match_counts(self) -> None:
         """Verify rates computed correctly from the 6 mock scores."""
         # MOCK_TEST_SCORES: 3 caught_real_bug, 1 redundant, 1 false_failure
         metrics = _aggregate(

@@ -1,34 +1,40 @@
 from __future__ import annotations
 
-from pathlib import Path
+import json
+from typing import Any, ClassVar
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel
 
-from config import CODER_MODEL, MAX_TOKENS
+from agents.base import BaseAgent
+from config import CODER_MODEL
 from models.schemas import AgentState, CodeArtifact
-
-_PROMPT = (Path(__file__).parent.parent / "prompts" / "coder.md").read_text()
 
 
 class ArtifactList(BaseModel):
     artifacts: list[CodeArtifact]
 
 
-def get_llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model=CODER_MODEL,
-        max_tokens=MAX_TOKENS["coder"],
-    )
+class CoderAgent(BaseAgent):
+    model_name: ClassVar[str] = CODER_MODEL
+    max_tokens_key: ClassVar[str] = "coder"
+    prompt_name: ClassVar[str] = "coder"
+
+
+_agent: CoderAgent | None = None
+
+
+def _get_agent() -> CoderAgent:
+    global _agent
+    if _agent is None:
+        _agent = CoderAgent()
+    return _agent
 
 
 def _build_prompt(state: AgentState) -> str:
     parts = [f"User request: {state.user_request}"]
 
     if state.plan:
-        import json
-
         parts.append(f"\nImplementation plan:\n{json.dumps(state.plan.model_dump(), indent=2)}")
 
     if state.review and not state.review.approved:
@@ -53,12 +59,13 @@ def _build_prompt(state: AgentState) -> str:
     return "\n".join(parts)
 
 
-def coder_node(state: AgentState) -> dict:
+def coder_node(state: AgentState) -> dict[str, Any]:
     """Generates or revises code artifacts based on the plan and feedback."""
-    llm = get_llm().with_structured_output(ArtifactList)
+    agent = _get_agent()
+    llm = agent.llm.with_structured_output(ArtifactList)
 
     messages = [
-        SystemMessage(content=_PROMPT),
+        SystemMessage(content=agent.system_prompt),
         HumanMessage(content=_build_prompt(state)),
     ]
 

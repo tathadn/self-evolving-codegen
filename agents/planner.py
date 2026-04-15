@@ -1,30 +1,38 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import Any, ClassVar
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config import MAX_TOKENS, PLANNER_MODEL
+from agents.base import BaseAgent
+from config import PLANNER_MODEL
 from models.schemas import AgentState, Plan
 
-_PROMPT = (Path(__file__).parent.parent / "prompts" / "planner.md").read_text()
+
+class PlannerAgent(BaseAgent):
+    model_name: ClassVar[str] = PLANNER_MODEL
+    max_tokens_key: ClassVar[str] = "planner"
+    prompt_name: ClassVar[str] = "planner"
 
 
-def get_llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model=PLANNER_MODEL,
-        max_tokens=MAX_TOKENS["planner"],
-    )
+_agent: PlannerAgent | None = None
 
 
-def planner_node(state: AgentState) -> dict:
+def _get_agent() -> PlannerAgent:
+    global _agent
+    if _agent is None:
+        _agent = PlannerAgent()
+    return _agent
+
+
+def planner_node(state: AgentState) -> dict[str, Any]:
     """Produces a structured implementation plan for the user's request."""
-    llm = get_llm().with_structured_output(Plan)
+    agent = _get_agent()
+    llm = agent.llm.with_structured_output(Plan)
 
     messages = [
-        SystemMessage(content=_PROMPT),
+        SystemMessage(content=agent.system_prompt),
         HumanMessage(content=f"Create an implementation plan for: {state.user_request}"),
     ]
 

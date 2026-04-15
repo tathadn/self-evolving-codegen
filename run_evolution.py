@@ -14,18 +14,12 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from config import (  # noqa: E402
-    LANGCHAIN_PROJECT,
-    LANGCHAIN_TRACING_V2,
-    ORCHESTRATOR_MODEL,
-    ROLLBACK_THRESHOLD,
-    SAMPLE_TASKS,
-)
 from langgraph.graph import END, START, StateGraph  # noqa: E402
 
 from agents import (  # noqa: E402
@@ -36,6 +30,13 @@ from agents import (  # noqa: E402
     should_continue,
 )
 from agents.tester import make_tester_node  # noqa: E402
+from config import (  # noqa: E402
+    LANGCHAIN_PROJECT,
+    LANGCHAIN_TRACING_V2,
+    ORCHESTRATOR_MODEL,
+    ROLLBACK_THRESHOLD,
+    SAMPLE_TASKS,
+)
 from evolution import analyzer, evaluator, evolver  # noqa: E402
 from evolution.cache import load_cached, rate_limited_call, save_to_cache  # noqa: E402
 from evolution.models import GenerationMetrics  # noqa: E402
@@ -49,7 +50,7 @@ _PROMPTS_DIR = Path(__file__).parent / "prompts"
 # ── Pipeline helpers ─────────────────────────────────────────────────────────
 
 
-def _build_graph_for_generation(generation: int):
+def _build_graph_for_generation(generation: int) -> Any:
     """Build a compiled LangGraph pipeline with the tester at the given generation.
 
     The tester node is the only agent parameterised by generation; all others
@@ -61,12 +62,12 @@ def _build_graph_for_generation(generation: int):
     Returns:
         A compiled LangGraph StateGraph ready for invocation.
     """
-    graph: StateGraph = StateGraph(AgentState)
+    graph: StateGraph = StateGraph(AgentState)  # type: ignore[type-arg]
     graph.add_node("orchestrator", orchestrator_node)
     graph.add_node("planner", planner_node)
     graph.add_node("coder", coder_node)
     graph.add_node("reviewer", reviewer_node)
-    graph.add_node("tester", make_tester_node(generation=generation))
+    graph.add_node("tester", make_tester_node(generation=generation))  # type: ignore[arg-type]
 
     graph.add_edge(START, "orchestrator")
     graph.add_edge("orchestrator", "planner")
@@ -107,10 +108,10 @@ def _run_task(
 
     print(f"    [API CALL]  {task[:60]}...")
 
-    def _invoke() -> dict:
+    def _invoke() -> dict[str, Any]:
         app = _build_graph_for_generation(generation)
         initial = AgentState(user_request=task, max_iterations=max_iterations)
-        run_config = {
+        run_config: dict[str, Any] = {
             "recursion_limit": 50,
             "run_name": f"{experiment_name}/gen{generation}",
             "metadata": {
@@ -120,7 +121,8 @@ def _run_task(
             },
             "tags": [experiment_name, f"gen-{generation}"],
         }
-        return app.invoke(initial, config=run_config)
+        result: dict[str, Any] = app.invoke(initial, config=run_config)
+        return result
 
     result = rate_limited_call(_invoke)
     state = AgentState(**result)
@@ -256,7 +258,9 @@ def run_evolution(
     print(f"  Self-Evolving Tester — Experiment: {experiment_name}")
     print(f"  Generations: {generations}  |  Batch size: {batch_size}")
     print(f"  Orchestrator model: {ORCHESTRATOR_MODEL}")
-    tracing_status = f"enabled (project: {LANGCHAIN_PROJECT})" if LANGCHAIN_TRACING_V2 else "disabled"
+    tracing_status = (
+        f"enabled (project: {LANGCHAIN_PROJECT})" if LANGCHAIN_TRACING_V2 else "disabled"
+    )
     print(f"  LangSmith tracing: {tracing_status}")
     print(f"{'=' * 60}\n")
 
@@ -283,7 +287,7 @@ def run_evolution(
         print(f"\n[Gen {gen}] Starting batch of {len(tasks)} task(s)...")
 
         per_task_metrics: list[GenerationMetrics] = []
-        raw_results: list[dict] = []
+        raw_results: list[dict[str, Any]] = []
 
         for i, task in enumerate(tasks, 1):
             print(f"  [{i}/{len(tasks)}] {task[:72]}...")

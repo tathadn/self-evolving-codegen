@@ -1,3 +1,12 @@
+"""Tester-prompt evolver — the "writes its own prompt" step of the loop.
+
+Takes the current tester system prompt plus the analyzer's diagnosis
+(failure patterns, strengths, proposed fixes) and produces an edited
+prompt for generation N+1, saved as ``prompts/tester_gen_{N+1}.txt``.
+Changes are intended to be surgical: preserve what works, patch what
+broke, keep the output under ``config.MAX_PROMPT_LENGTH`` words.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -32,7 +41,7 @@ RULES:
 
 def get_llm() -> ChatAnthropic:
     """Return the Sonnet model used for prompt evolution."""
-    return ChatAnthropic(
+    return ChatAnthropic(  # type: ignore[call-arg]
         model=EVOLVER_MODEL,
         max_tokens=MAX_TOKENS["evolver"],
     )

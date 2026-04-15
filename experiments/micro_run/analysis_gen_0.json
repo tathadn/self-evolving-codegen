@@ -1,0 +1,16 @@
+{
+  "failure_patterns": [
+    "The tester agent is failing to produce any test file artifacts at all \u2014 100% of runs show 'Tester agent did not generate any test files.' This is a total output failure, not a test quality issue. The agent is likely generating malformed JSON responses (evidenced by 'Unterminated string starting at' parse errors) that prevent artifact extraction.",
+    "The tester generates tests that depend on external package installation (e.g., uvicorn[standard] with httptools) via pip at runtime, causing hard failures in network-restricted environments. Tests for FastAPI endpoints must use only pre-installed packages like `httpx` and `fastapi.testclient.TestClient` without requiring network access.",
+    "The tester system prompt contains no structural guidance on output format, artifact schema, or JSON serialization constraints, causing the LLM to produce unterminated strings in its JSON response (~2 confirmed parse failures). The prompt gives no instruction on escaping, length limits, or how to handle multi-line code content inside JSON strings."
+  ],
+  "strengths_to_keep": [
+    "The false_failure_rate is 0.0 and redundancy_rate is 0.0, indicating that when tests are generated and run, they do not produce spurious failures or duplicate redundant assertions.",
+    "The prompt correctly instructs the tester to focus on public interfaces and critical paths rather than implementation internals, which is the right testing philosophy."
+  ],
+  "proposed_fixes": [
+    "CRITICAL \u2014 Add explicit artifact output instructions to prevent JSON serialization failures: 'When writing test file content inside JSON, you MUST escape all special characters properly: use \\n for newlines, \\\\ for backslashes, and \\\" for quotes within strings. Never include raw newlines inside a JSON string value. Keep each test file under 3000 characters. Always close every JSON string, array, and object. Validate mentally that your JSON is complete before finishing.'",
+    "Add a strict constraint on dependency usage: 'Only import packages that are part of the Python standard library or are guaranteed to be pre-installed: pytest, fastapi, httpx, flask, requests, sqlite3, json, os, re, datetime. For FastAPI tests, always use `from fastapi.testclient import TestClient` \u2014 never require uvicorn, httptools, or any package that needs pip installation at test time.'",
+    "Add an explicit artifact generation reminder to prevent empty output: 'You MUST always produce at least one artifact with filename test_main.py, language python, and content containing at least 3 pytest test functions. If you are uncertain about the code structure, write tests based on the most likely public function names and class interfaces described in the task. Never return an empty artifacts list.'"
+  ]
+}

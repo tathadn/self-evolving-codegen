@@ -1,5 +1,7 @@
 # Self-Evolving Code Generator
 
+[![CI](https://github.com/tathadn/self-evolving-codegen/actions/workflows/ci.yml/badge.svg)](https://github.com/tathadn/self-evolving-codegen/actions/workflows/ci.yml)
+
 > V2 of [multi-agent-codegen](https://github.com/tathadn/multi-agent-codegen) — the same pipeline, now with a self-evolving tester.
 
 A multi-agent AI code generation pipeline (LangGraph + Claude) where the **Tester agent autonomously improves its own test generation strategy** over successive generations through self-evaluation, failure analysis, and prompt evolution.
@@ -78,6 +80,46 @@ WEIGHTS = {
 #### Rollback Logic
 
 If a newly evolved prompt causes the overall score to drop by more than 15% relative to the previous generation, the evolution loop automatically reverts to the prior generation's prompt and continues.
+
+---
+
+## Results
+
+A committed run of the evolution loop lives in [`experiments/micro_run/`](experiments/micro_run/). The chart below is produced by `plot_evolution()` in [`evolution/visualize.py`](evolution/visualize.py) directly from the run's metrics history.
+
+![Evolution performance chart — micro_run](experiments/micro_run/evolution_chart.png)
+
+### Metrics — Generation 0 → Generation 1
+
+Source: [`metrics_gen_0.json`](experiments/micro_run/metrics_gen_0.json), [`metrics_gen_1.json`](experiments/micro_run/metrics_gen_1.json).
+
+| Metric | Gen 0 | Gen 1 | Δ |
+|---|---:|---:|---:|
+| **Overall score** | 0.506 | **0.921** | **+0.415** |
+| Bug detection rate | 0.00 | 1.00 | +1.00 |
+| False failure rate | 0.00 | 0.00 | 0.00 |
+| Redundancy rate | 0.000 | 0.042 | +0.042 |
+| Coverage quality (/10) | 5.0 | 8.5 | +3.5 |
+| Edge case coverage (/10) | 5.0 | 7.5 | +2.5 |
+
+**What the evolver fixed.** Gen 0's effective score was pinned at 0.506 because the LLM-as-Judge could not parse the tester's output at all — `weaknesses` in `metrics_gen_0.json` show two `Unterminated string` JSON decode errors. The analyzer surfaced this as a prompt-format failure; the evolver responded by writing generation 1's prompt with an explicit `test_main.py` output contract, JSON-serialisation escape rules, and dependency pins. With the format-parse failure gone, the underlying test generation was already strong: 50/50 tests passing, full bug detection, zero false failures, and coverage jumping from 5.0 to 8.5.
+
+<details>
+<summary><strong>Diff — <code>tester_gen_0.txt</code> → <code>tester_gen_1.txt</code> (click to expand)</strong></summary>
+
+The evolver preserved the original responsibilities block and added three new constraint sections. The most load-bearing additions:
+
+- **Mandatory output artifact** — "You MUST always produce at least one artifact with filename `test_main.py`". Forces a stable filename the sandbox runner can locate.
+- **JSON serialisation rules** — explicit escaping for backslashes, quotes, and newlines inside test source strings. Directly fixes the `Unterminated string` parse errors seen in gen 0.
+- **Dependency constraints** — pinned allowlist (FastAPI, requests, pytest, `pytest-asyncio`, etc.) matching the sandbox's preinstalled packages.
+
+See [`prompts/tester_gen_0.txt`](prompts/tester_gen_0.txt) and [`prompts/tester_gen_1.txt`](prompts/tester_gen_1.txt) for the full text.
+
+</details>
+
+### Test suite
+
+All tests are pure-Python and use [`evolution/mock_data.py`](evolution/mock_data.py) — **zero API cost**, safe to run in CI without an Anthropic key. Coverage is reported in the [`Tests & Coverage`](.github/workflows/ci.yml) job of the CI workflow.
 
 ---
 

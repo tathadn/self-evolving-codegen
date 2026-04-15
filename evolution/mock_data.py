@@ -9,12 +9,13 @@ Cost: $0.00 — no API calls anywhere in this file.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from evolution.analyzer import AnalysisResult
 from evolution.models import GenerationMetrics, TestEffectivenessScore
 
-
 # ── Fake per-test scores ───────────────────────────────────────────────────────
+
 
 def make_test_score(
     test_name: str,
@@ -35,7 +36,9 @@ def make_test_score(
 
 MOCK_TEST_SCORES: list[TestEffectivenessScore] = [
     make_test_score("test_add_positive", caught_real_bug=True, coverage_category="happy_path"),
-    make_test_score("test_divide_by_zero", caught_real_bug=True, coverage_category="error_handling"),
+    make_test_score(
+        "test_divide_by_zero", caught_real_bug=True, coverage_category="error_handling"
+    ),
     make_test_score("test_subtract_negative", caught_real_bug=False, coverage_category="edge_case"),
     make_test_score("test_multiply_zero", caught_real_bug=True, coverage_category="edge_case"),
     make_test_score(
@@ -54,6 +57,7 @@ MOCK_TEST_SCORES: list[TestEffectivenessScore] = [
 
 
 # ── Fake GenerationMetrics (5 generations showing improvement) ─────────────────
+
 
 def _make_metrics(
     generation: int,
@@ -167,7 +171,7 @@ MOCK_ANALYSIS: AnalysisResult = AnalysisResult(
 
 # ── Fake raw test result dicts (as produced by the pipeline) ───────────────────
 
-MOCK_RAW_RESULTS: list[dict] = [
+MOCK_RAW_RESULTS: list[dict[str, Any]] = [
     {
         "task": "A Python calculator with add, subtract, multiply, divide",
         "passed": True,
@@ -191,7 +195,16 @@ MOCK_RAW_RESULTS: list[dict] = [
         "errors": [],
         "per_test_results": [
             {"name": f"test_{op}", "passed": True}
-            for op in ["insert", "delete", "search", "reverse", "empty", "single", "duplicate", "order"]
+            for op in [
+                "insert",
+                "delete",
+                "search",
+                "reverse",
+                "empty",
+                "single",
+                "duplicate",
+                "order",
+            ]
         ],
     },
     {

@@ -1,21 +1,28 @@
 from __future__ import annotations
 
-from pathlib import Path
+from typing import Any, ClassVar
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config import MAX_TOKENS, REVIEWER_MODEL
+from agents.base import BaseAgent
+from config import REVIEWER_MODEL
 from models.schemas import AgentState, ReviewFeedback, TaskStatus
 
-_PROMPT = (Path(__file__).parent.parent / "prompts" / "reviewer.md").read_text()
+
+class ReviewerAgent(BaseAgent):
+    model_name: ClassVar[str] = REVIEWER_MODEL
+    max_tokens_key: ClassVar[str] = "reviewer"
+    prompt_name: ClassVar[str] = "reviewer"
 
 
-def get_llm() -> ChatAnthropic:
-    return ChatAnthropic(
-        model=REVIEWER_MODEL,
-        max_tokens=MAX_TOKENS["reviewer"],
-    )
+_agent: ReviewerAgent | None = None
+
+
+def _get_agent() -> ReviewerAgent:
+    global _agent
+    if _agent is None:
+        _agent = ReviewerAgent()
+    return _agent
 
 
 def _format_artifacts(state: AgentState) -> str:
@@ -25,12 +32,13 @@ def _format_artifacts(state: AgentState) -> str:
     return "\n".join(parts)
 
 
-def reviewer_node(state: AgentState) -> dict:
+def reviewer_node(state: AgentState) -> dict[str, Any]:
     """Reviews generated code and returns structured feedback."""
-    llm = get_llm().with_structured_output(ReviewFeedback)
+    agent = _get_agent()
+    llm = agent.llm.with_structured_output(ReviewFeedback)
 
     messages = [
-        SystemMessage(content=_PROMPT),
+        SystemMessage(content=agent.system_prompt),
         HumanMessage(content=_format_artifacts(state)),
     ]
 

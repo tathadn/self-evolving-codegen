@@ -10,14 +10,14 @@ from evolution.models import EvolutionHistory, GenerationMetrics, TestEffectiven
 
 
 class TestTestEffectivenessScore:
-    def test_defaults(self):
+    def test_defaults(self) -> None:
         score = TestEffectivenessScore(test_name="test_foo")
         assert score.caught_real_bug is False
         assert score.was_redundant is False
         assert score.was_false_failure is False
         assert score.coverage_category == "happy_path"
 
-    def test_all_fields(self):
+    def test_all_fields(self) -> None:
         score = TestEffectivenessScore(
             test_name="test_divide_by_zero",
             caught_real_bug=True,
@@ -30,7 +30,7 @@ class TestTestEffectivenessScore:
 
 
 class TestGenerationMetrics:
-    def test_valid_metrics(self):
+    def test_valid_metrics(self) -> None:
         m = GenerationMetrics(
             generation=0,
             bug_detection_rate=0.75,
@@ -44,7 +44,7 @@ class TestGenerationMetrics:
         assert m.overall_score == 0.65
         assert isinstance(m.timestamp, datetime)
 
-    def test_default_lists(self):
+    def test_default_lists(self) -> None:
         m = GenerationMetrics(
             generation=1,
             bug_detection_rate=0.5,
@@ -57,7 +57,7 @@ class TestGenerationMetrics:
         assert m.strengths == []
         assert m.weaknesses == []
 
-    def test_rate_bounds_enforced(self):
+    def test_rate_bounds_enforced(self) -> None:
         with pytest.raises(Exception):
             GenerationMetrics(
                 generation=0,
@@ -69,7 +69,7 @@ class TestGenerationMetrics:
                 overall_score=0.5,
             )
 
-    def test_serialization_roundtrip(self):
+    def test_serialization_roundtrip(self) -> None:
         m = GenerationMetrics(
             generation=2,
             bug_detection_rate=0.8,
@@ -89,13 +89,13 @@ class TestGenerationMetrics:
 
 
 class TestEvolutionHistory:
-    def test_empty_history(self):
+    def test_empty_history(self) -> None:
         h = EvolutionHistory(experiment_name="test_exp")
         assert h.experiment_name == "test_exp"
         assert h.generations == []
         assert h.prompt_versions == {}
 
-    def test_add_generation(self):
+    def test_add_generation(self) -> None:
         h = EvolutionHistory(experiment_name="test_exp")
         m = GenerationMetrics(
             generation=0,

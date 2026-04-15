@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from evolution.analyzer import AnalysisResult
 from evolution.models import EvolutionHistory, GenerationMetrics
@@ -153,6 +154,6 @@ class EvolutionTracker:
         )
 
     @staticmethod
-    def _write_json(path: Path, data: dict) -> None:
+    def _write_json(path: Path, data: dict[str, Any]) -> None:
         """Write a dict to a JSON file with readable indentation."""
         path.write_text(json.dumps(data, indent=2, default=str))

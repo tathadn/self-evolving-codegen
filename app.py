@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Any
 
 import streamlit as st
 from dotenv import load_dotenv
@@ -46,10 +47,10 @@ TESTER_MODELS = {
 }
 
 
-def render_sidebar() -> tuple[int, str, dict, dict]:
+def render_sidebar() -> tuple[int, str, dict[str, Any], dict[str, str]]:
     """Render sidebar and return (max_iterations, tester_model, placeholders, indicator_states)."""
-    placeholders: dict = {}
-    indicator_states: dict = {key: "waiting" for key in PIPELINE_ORDER}
+    placeholders: dict[str, Any] = {}
+    indicator_states: dict[str, str] = {key: "waiting" for key in PIPELINE_ORDER}
 
     with st.sidebar:
         st.header("Settings")
@@ -79,7 +80,12 @@ def render_sidebar() -> tuple[int, str, dict, dict]:
     return max_iterations, tester_model, placeholders, indicator_states
 
 
-def set_indicator(placeholders: dict, indicator_states: dict, agent: str, state: str) -> None:
+def set_indicator(
+    placeholders: dict[str, Any],
+    indicator_states: dict[str, str],
+    agent: str,
+    state: str,
+) -> None:
     indicator_states[agent] = state
     placeholders[agent].markdown(CIRCLE[state])
 
@@ -88,8 +94,8 @@ def run_with_streaming(
     request: str,
     max_iterations: int,
     tester_model: str,
-    placeholders: dict,
-    indicator_states: dict,
+    placeholders: dict[str, Any],
+    indicator_states: dict[str, str],
 ) -> AgentState:
     """Run the graph with app.stream() and update sidebar indicators in real time."""
     os.environ["TESTER_MODEL"] = tester_model
@@ -105,7 +111,7 @@ def run_with_streaming(
     # Mark the first agent as running before stream starts
     set_indicator(placeholders, indicator_states, "orchestrator", "running")
 
-    final_state: dict = {}
+    final_state: dict[str, Any] = {}
     coder_iteration = 0
 
     with st.status("Running agent pipeline...", expanded=True) as pipeline_status:
@@ -241,13 +247,14 @@ def _list_experiments() -> list[str]:
     )
 
 
-def _load_evolution_history(experiment_name: str) -> dict | None:
+def _load_evolution_history(experiment_name: str) -> dict[str, Any] | None:
     """Load evolution_history.json for the given experiment, or None if missing."""
     history_path = _EXPERIMENTS_DIR / experiment_name / "evolution_history.json"
     if not history_path.exists():
         return None
     try:
-        return json.loads(history_path.read_text())
+        data: dict[str, Any] = json.loads(history_path.read_text())
+        return data
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -315,7 +322,7 @@ def render_evolution_tab() -> None:
 
     # ── Prompt comparison ────────────────────────────────────────────────────
     st.markdown("#### Prompt Viewer")
-    prompt_versions: dict = history.get("prompt_versions", {})
+    prompt_versions: dict[str, Any] = history.get("prompt_versions", {})
     gen_keys = sorted(prompt_versions.keys(), key=lambda k: int(k))
 
     if gen_keys:

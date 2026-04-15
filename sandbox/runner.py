@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from models.schemas import TestResult
 
@@ -115,7 +116,7 @@ def _parse_json_report(report_path: Path, stdout: str, stderr: str) -> TestResul
     # count both outright failures and collection/setup errors
     failed: int = summary.get("failed", 0) + summary.get("error", 0)
 
-    per_test: list[dict] = [
+    per_test: list[dict[str, Any]] = [
         {
             "name": t.get("nodeid", ""),
             "passed": t.get("outcome") == "passed",
@@ -167,9 +168,9 @@ def _extract_counts(stdout: str) -> tuple[int, int, int]:
     return passed + failed, passed, failed
 
 
-def _extract_per_test(stdout: str) -> list[dict]:
+def _extract_per_test(stdout: str) -> list[dict[str, Any]]:
     """Parse per-test PASSED / FAILED lines from pytest ``-v`` output."""
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     for line in stdout.splitlines():
         if " PASSED" in line:
             results.append({"name": line.split(" PASSED")[0].strip(), "passed": True})

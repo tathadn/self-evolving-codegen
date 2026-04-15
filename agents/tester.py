@@ -2,35 +2,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
-from pathlib import Path
+from typing import Any, ClassVar
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import BaseModel, Field, field_validator
 
-from config import MAX_TOKENS, TESTER_MODEL
+from agents.base import TesterBaseAgent
+from config import TESTER_MODEL
 from models.schemas import AgentState, CodeArtifact, TaskStatus, TestResult
 from sandbox.runner import CodeFile, run_in_sandbox
-
-_PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
-
-
-def _load_prompt(generation: int) -> str:
-    """Load the tester system prompt for the given generation.
-
-    Generation 0 uses the original ``prompts/tester.md``.
-    Generation N > 0 uses ``prompts/tester_gen_{N}.txt``, falling back to
-    the nearest earlier generation that exists, then to the base prompt.
-    """
-    if generation == 0:
-        return (_PROMPTS_DIR / "tester.md").read_text()
-    # Walk backwards to find the most recent available evolved prompt
-    for gen in range(generation, 0, -1):
-        path = _PROMPTS_DIR / f"tester_gen_{gen}.txt"
-        if path.exists():
-            return path.read_text()
-    # Ultimate fallback: original base prompt
-    return (_PROMPTS_DIR / "tester.md").read_text()
 
 
 class TestFileList(BaseModel):
@@ -44,12 +24,18 @@ class TestFileList(BaseModel):
         return v
 
 
-def get_llm() -> ChatAnthropic:
-    """Return the LLM used by the tester."""
-    return ChatAnthropic(
-        model=TESTER_MODEL,
-        max_tokens=MAX_TOKENS["tester"],
-    )
+class TesterAgent(TesterBaseAgent):
+    model_name: ClassVar[str] = TESTER_MODEL
+    max_tokens_key: ClassVar[str] = "tester"
+
+
+_cache: dict[int, TesterAgent] = {}
+
+
+def _get_agent(generation: int) -> TesterAgent:
+    if generation not in _cache:
+        _cache[generation] = TesterAgent(generation=generation)
+    return _cache[generation]
 
 
 def _format_artifacts(state: AgentState) -> str:
@@ -60,8 +46,7 @@ def _format_artifacts(state: AgentState) -> str:
     return "\n".join(parts)
 
 
-
-def make_tester_node(generation: int = 0) -> Callable[[AgentState], dict]:
+def make_tester_node(generation: int = 0) -> Callable[[AgentState], dict[str, Any]]:
     """Return a LangGraph-compatible tester node for the given prompt generation.
 
     Generation 0 loads the original V1 prompt and behaves identically to V1.
@@ -73,14 +58,14 @@ def make_tester_node(generation: int = 0) -> Callable[[AgentState], dict]:
     Returns:
         A callable ``(state: AgentState) -> dict`` suitable for use as a graph node.
     """
-    prompt = _load_prompt(generation)
 
-    def tester_node(state: AgentState) -> dict:
+    def tester_node(state: AgentState) -> dict[str, Any]:
         """Generate test files via LLM, execute them in the sandbox, return TestResult."""
-        llm = get_llm().with_structured_output(TestFileList)
+        agent = _get_agent(generation)
+        llm = agent.llm.with_structured_output(TestFileList)
 
         messages = [
-            SystemMessage(content=prompt),
+            SystemMessage(content=agent.system_prompt),
             HumanMessage(content=_format_artifacts(state)),
         ]
 

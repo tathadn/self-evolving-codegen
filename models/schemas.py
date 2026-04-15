@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Any
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -33,7 +33,7 @@ class TestResult(BaseModel):
     # V2 evolution metadata — all Optional so V1 pipeline behaviour is unchanged
     generation: int | None = Field(default=None, description="Tester prompt generation used")
     test_code: str | None = Field(default=None, description="Raw generated test file content")
-    per_test_results: list[dict] | None = Field(
+    per_test_results: list[dict[str, Any]] | None = Field(
         default=None, description="Per-test pass/fail breakdown parsed from pytest output"
     )
 

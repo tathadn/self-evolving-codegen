@@ -13,8 +13,12 @@ import hashlib
 import json
 import os
 import time
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from config import API_CALL_DELAY, CACHE_DIR, ENABLE_CACHE
+
+T = TypeVar("T")
 
 
 def get_cache_key(task: str, generation: int) -> str:
@@ -30,7 +34,7 @@ def get_cache_key(task: str, generation: int) -> str:
     return hashlib.md5(f"{task}:gen{generation}".encode()).hexdigest()
 
 
-def load_cached(task: str, generation: int) -> dict | None:
+def load_cached(task: str, generation: int) -> dict[str, Any] | None:
     """Load a cached pipeline result from disk.
 
     Args:
@@ -45,11 +49,12 @@ def load_cached(task: str, generation: int) -> dict | None:
     cache_path = os.path.join(CACHE_DIR, f"{get_cache_key(task, generation)}.json")
     if os.path.exists(cache_path):
         with open(cache_path) as f:
-            return json.load(f)
+            data: dict[str, Any] = json.load(f)
+            return data
     return None
 
 
-def save_to_cache(task: str, generation: int, result: dict) -> None:
+def save_to_cache(task: str, generation: int, result: dict[str, Any]) -> None:
     """Write a pipeline result to the disk cache.
 
     Args:
@@ -63,7 +68,7 @@ def save_to_cache(task: str, generation: int, result: dict) -> None:
         json.dump(result, f, indent=2, default=str)
 
 
-def rate_limited_call(func, *args, **kwargs):
+def rate_limited_call(func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
     """Wrap any API call with a delay to avoid hitting Pro plan rate limits.
 
     Sleeps for ``API_CALL_DELAY`` seconds before invoking ``func``.

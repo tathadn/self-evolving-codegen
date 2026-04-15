@@ -13,8 +13,14 @@ class TestEffectivenessScore(BaseModel):
     """
 
     test_name: str = Field(description="Name or identifier of the test case")
-    caught_real_bug: bool = Field(default=False, description="Whether the test detected a genuine defect")
-    was_redundant: bool = Field(default=False, description="Whether the test duplicates coverage of another test")
+    caught_real_bug: bool = Field(
+        default=False,
+        description="Whether the test detected a genuine defect",
+    )
+    was_redundant: bool = Field(
+        default=False,
+        description="Whether the test duplicates coverage of another test",
+    )
     was_false_failure: bool = Field(
         default=False,
         description="Whether the test fails for a reason unrelated to actual code correctness",

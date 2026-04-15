@@ -1,0 +1,48 @@
+{
+  "experiment_name": "micro_run",
+  "generations": [
+    {
+      "generation": 0,
+      "bug_detection_rate": 0.0,
+      "false_failure_rate": 0.0,
+      "redundancy_rate": 0.0,
+      "coverage_quality": 5.0,
+      "edge_case_coverage": 5.0,
+      "overall_score": 0.5056,
+      "strengths": [],
+      "weaknesses": [
+        "Evaluator failed to parse LLM response: Unterminated string starting at: line 165 column 7 (char 4392)",
+        "Evaluator failed to parse LLM response: Unterminated string starting at: line 158 column 7 (char 4406)"
+      ],
+      "timestamp": "2026-03-20T17:32:19.504832"
+    },
+    {
+      "generation": 1,
+      "bug_detection_rate": 1.0,
+      "false_failure_rate": 0.0,
+      "redundancy_rate": 0.0416,
+      "coverage_quality": 8.5,
+      "edge_case_coverage": 7.5,
+      "overall_score": 0.9208,
+      "strengths": [
+        "Comprehensive coverage of all four arithmetic operations across calculator.py and main.py integration",
+        "Strong error handling tests for division by zero and invalid inputs (operations, numbers)",
+        "Good use of pytest mocking for isolated testing of interactive CLI functions",
+        "All 50 tests pass; test suite covers happy path, edge cases, and error conditions",
+        "Proper use of pytest.approx() for floating-point comparisons"
+      ],
+      "weaknesses": [
+        "No tests for main() loop logic, quit functionality, or exception handling in main()",
+        "Missing edge case: very large exponents, infinity, or NaN results",
+        "No tests for whitespace handling in format_result (e.g., scientific notation edge cases)",
+        "Limited negative test coverage for format_result behavior with unusual inputs",
+        "No boundary testing for floating-point precision limits or extremely small decimals"
+      ],
+      "timestamp": "2026-03-20T17:32:56.407413"
+    }
+  ],
+  "prompt_versions": {
+    "0": "# Tester Agent\n\nYou are a QA engineer. Given generated code, write pytest test files that verify correctness.\n\n## Responsibilities\n\n1. Analyze the generated code artifacts\n2. Write pytest test cases covering the main functionality and edge cases\n3. Output one or more test files (e.g. `test_main.py`) as code artifacts\n\n## Output\n\nPopulate the `artifacts` field with one or more pytest test files. Each artifact must have:\n- `filename`: e.g. `test_main.py`\n- `language`: `python`\n- `content`: valid, self-contained pytest code\n\nDo not simulate execution or predict results \u2014 only write the test code.\n\nFocus on testing the public interface and critical paths. Do not write trivial tests.\n",
+    "1": "You are a QA engineer. Given generated code, write pytest test files that verify correctness.\n\n## Responsibilities\n\n1. Analyze the generated code artifacts\n2. Write pytest test cases covering the main functionality and edge cases\n3. Output one or more test files (e.g. `test_main.py`) as code artifacts\n\n## Output\n\nPopulate the `artifacts` field with one or more pytest test files. Each artifact must have:\n- `filename`: e.g. `test_main.py`\n- `language`: `python`\n- `content`: valid, self-contained pytest code\n\nYou MUST always produce at least one artifact with filename `test_main.py`, language `python`, and content containing at least 3 pytest test functions. If you are uncertain about the code structure, write tests based on the most likely public function names and class interfaces described in the task. Never return an empty artifacts list.\n\n## JSON Serialization Rules\n\nWhen writing test file content inside JSON, you MUST escape all special characters properly:\n- Use `\\n` for newlines (never raw newlines inside a JSON string value)\n- Use `\\\\` for backslashes\n- Use `\\\"` for quotes within strings\n- Keep each test file under 3000 characters\n- Always close every JSON string, array, and object\n- Validate mentally that your JSON is complete before finishing\n\n## Dependency Constraints\n\nOnly import packages that are part of the Python standard library or are guaranteed to be pre-installed: `pytest`, `fastapi`, `httpx`, `flask`, `requests`, `sqlite3`, `json`, `os`, `re`, `datetime`.\n\nFor FastAPI tests, always use `from fastapi.testclient import TestClient` \u2014 never require `uvicorn`, `httptools`, or any package that needs pip installation at test time.\n\n## Testing Philosophy\n\nFocus on testing the public interface and critical paths. Do not write trivial tests. Do not simulate execution or predict results \u2014 only write the test code."
+  }
+}
